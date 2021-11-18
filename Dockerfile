@@ -61,7 +61,7 @@ RUN apt -y update \
     pcmanfm \
     xarchiver \
     libgomp1 \
- && wget -O turbovnc.deb https://sourceforge.net/projects/turbovnc/files/2.2.6/turbovnc_2.2.6_amd64.deb/download \
+ && wget -O turbovnc.deb https://s3.amazonaws.com/turbovnc-pr/dev/linux/turbovnc_2.2.80_amd64.deb \
  && wget -O virtualgl.deb https://sourceforge.net/projects/virtualgl/files/2.6.95%20%283.0rc1%29/virtualgl_2.6.95_amd64.deb/download \
  && wget -O virtualgl32.deb https://sourceforge.net/projects/virtualgl/files/2.6.95%20%283.0rc1%29/virtualgl32_2.6.95_amd64.deb/download \
  && dpkg -i turbovnc*.deb virtualgl*.deb \
