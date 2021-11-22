@@ -62,8 +62,8 @@ RUN apt -y update \
     xarchiver \
     libgomp1 \
  && wget -O turbovnc.deb https://s3.amazonaws.com/turbovnc-pr/dev/linux/turbovnc_2.2.80_amd64.deb \
- && wget -O virtualgl.deb https://sourceforge.net/projects/virtualgl/files/2.6.95%20%283.0rc1%29/virtualgl_2.6.95_amd64.deb/download \
- && wget -O virtualgl32.deb https://sourceforge.net/projects/virtualgl/files/2.6.95%20%283.0rc1%29/virtualgl32_2.6.95_amd64.deb/download \
+ && wget -O virtualgl.deb https://sourceforge.net/projects/virtualgl/files/3.0/virtualgl_3.0_amd64.deb/download \
+ && wget -O virtualgl32.deb https://sourceforge.net/projects/virtualgl/files/3.0/virtualgl32_3.0_amd64.deb/download \
  && dpkg -i turbovnc*.deb virtualgl*.deb \
  && rm *.deb \
  && apt install -f \
@@ -82,6 +82,9 @@ RUN apt -y update \
  && mv /home/docker/Sli* /home/docker/slicer \
  && rm slicer.tar.gz \
  && chown -R 1000:1000 /home/docker/slicer \
+ && git clone --branch httpWebServer https://github.com/mauigna06/SlicerWeb \
+ && mv SlicerWeb /home/docker/slicer/ \
+ && chown -R 1000:1000 /home/docker/slicer/SlicerWeb \
  && apt clean \
  && rm -rf /etc/ld.so.cache \
  && rm -rf /var/cache/ldconfig/* \
@@ -93,5 +96,12 @@ RUN LNUM=$(sed -n '/launcher_item_app/=' /etc/tint2/panel.tint2rc | head -1) && 
   sed -i "${LNUM}ilauncher_item_app = /home/docker/slicer/slicer.desktop" /etc/tint2/panel.tint2rc
 COPY etc/tint2/tint2rc.slicermorph /home/docker/.config/tint2/tintrc
 COPY slicer/* /home/docker/slicer/
-USER docker
+
+COPY addExtensionsModules.py /home/docker/slicer/
+
+RUN /home/docker/slicer/Slicer --python-script "/home/docker/slicer/addExtensionsModules.py" --no-splash --no-main-window
+
 WORKDIR /home/docker
+USER docker
+
+RUN /slicer/Slicer --python-code "slicer.util.selectModule('WebServer')"
