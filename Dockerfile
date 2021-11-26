@@ -61,6 +61,7 @@ RUN apt -y update \
     pcmanfm \
     xarchiver \
     libgomp1 \
+    xvfb \
  && wget -O turbovnc.deb https://s3.amazonaws.com/turbovnc-pr/dev/linux/turbovnc_2.2.80_amd64.deb \
  && wget -O virtualgl.deb https://sourceforge.net/projects/virtualgl/files/3.0/virtualgl_3.0_amd64.deb/download \
  && wget -O virtualgl32.deb https://sourceforge.net/projects/virtualgl/files/3.0/virtualgl32_3.0_amd64.deb/download \
@@ -99,9 +100,7 @@ COPY slicer/* /home/docker/slicer/
 
 COPY addExtensionsModules.py /home/docker/slicer/
 
-RUN /home/docker/slicer/Slicer --python-script "/home/docker/slicer/addExtensionsModules.py" --no-splash --no-main-window
+RUN xvfb-run --auto-servernum /home/docker/slicer/Slicer --python-script "/home/docker/slicer/addExtensionsModules.py" --no-splash --no-main-window
 
 WORKDIR /home/docker
 USER docker
-
-RUN /slicer/Slicer --python-code "slicer.util.selectModule('WebServer')"
