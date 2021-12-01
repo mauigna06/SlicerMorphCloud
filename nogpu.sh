@@ -23,6 +23,7 @@ CONTAINER_ID=$(docker run -it \
         -d \
         --expose 5801 \
         --expose 5901 \
+        --expose 2016 \
         -P \
         --rm \
         -m 100g \
@@ -37,6 +38,7 @@ errcho "to stop container (or log out of the window manager in the TurboVNC sess
 errcho
 PORT=$(docker port $CONTAINER_NAME 5901 | cut -f2 -d:)
 NOVNC_PORT=$(docker port $CONTAINER_NAME 5801 | cut -f2 -d:)
+REST_API_PORT=$(docker port $CONTAINER_NAME 2016 | cut -f2 -d:)
 VNC_DISPLAY=`hostname`::$PORT
 errcho "VNC DISPLAY is ${VNC_DISPLAY}"
 NOVNC_URL="http://`hostname`:${NOVNC_PORT}/vnc.html?host=`hostname`&port=$PORT&resize=remote"
@@ -50,5 +52,15 @@ errcho SESSION PASSWORD is $OTP
 docker exec $CONTAINER_NAME sh -c "echo $OTP| /opt/TurboVNC/bin/vncpasswd -f >/home/docker/.vnc/passwd 2>/dev/null"
 
 
-errcho USERNAME, PORT, NOVNC_PORT, VNC_DISPLAY, NOVNC_URL, OTP
-echo ${USERNAME}, ${PORT}, ${NOVNC_PORT}, ${VNC_DISPLAY}, ${NOVNC_URL}, ${OTP}
+#errcho USERNAME, PORT, NOVNC_PORT, REST_API_PORT, VNC_DISPLAY, NOVNC_URL, OTP
+#errcho $USERNAME, $PORT, $NOVNC_PORT, $REST_API_PORT, $VNC_DISPLAY, $NOVNC_URL, $OTP
+
+errcho
+errcho Open the NoVNC url, click connect, input the password, press right click on the black screen and go to Applications-Utilities-Slicer, the GUI will be unresponsive while a demo CT download is complete, the API server will start. Try this link:
+REST_API_URL=http://`hostname`:${REST_API_PORT}
+errcho "${REST_API_URL}"
+POST_URL=`hostname`:${REST_API_PORT}/slicer/repl
+errcho
+errcho Execute Slicer code like this:
+errcho curl -X POST "${POST_URL}" --data \"slicer.app.layoutManager\(\).setLayout\(slicer.vtkMRMLLayoutNode.SlicerLayoutOneUpRedSliceView\)\"
+
