@@ -100,6 +100,9 @@ COPY slicer/* /home/docker/slicer/
 
 COPY addExtensionsModules.py /home/docker/slicer/
 
+COPY .slicerrc.py /home/docker/slicer/
+RUN chown -R 1000:1000 /home/docker/slicer/.slicerrc.py
+
 RUN xvfb-run --auto-servernum /home/docker/slicer/Slicer --python-script "/home/docker/slicer/addExtensionsModules.py" --no-splash --no-main-window
 
 WORKDIR /home/docker
