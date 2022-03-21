@@ -159,25 +159,46 @@ RUN apt -y install \
  && rm *.deb \
  && apt install -f
 
+# On all strings that match the regex between the first and second / replace it by the regex
+#   between the second and third /
+# Configure window manager as openbox-session
+# Set up noVNC path
  RUN sed -i 's/^# \$wm =.*/\$wm = \"openbox-session\";/g' /etc/turbovncserver.conf \
- && sed -i 's/^# \$noVNC =.*/\$noVNC = \"\/home\/docker\/noVNC\";/g' /etc/turbovncserver.conf \
- && git clone https://github.com/novnc/noVNC.git \
+ && sed -i 's/^# \$noVNC =.*/\$noVNC = \"\/home\/docker\/noVNC\";/g' /etc/turbovncserver.conf
+ 
+ # Clone noVNC repository
+ # Move to its final location 
+ # Setup ownership of all noVNC directory files (including it) to user='docker', group='docker'
+ RUN git clone https://github.com/novnc/noVNC.git \
  && mv noVNC /home/docker/ \
- && chown -R 1000:1000 /home/docker/noVNC \
- && mkdir /home/docker/.vnc \
+ && chown -R 1000:1000 /home/docker/noVNC
+
+# Set up novnc password
+ RUN mkdir /home/docker/.vnc \
  && touch /home/docker/.vnc/passwd \
  && chmod 600 /home/docker/.vnc/passwd \
- && chown -R 1000:1000 /home/docker/.vnc \
- && echo 'tint2 &' >>/etc/xdg/openbox/autostart \
- && wget https://download.slicer.org/bitstream/61a70469342a877cb3e5fe33 -O slicer.tar.gz \
+ && chown -R 1000:1000 /home/docker/.vnc
+
+# Create a file named "autostart" with "tint2 &" as text
+# These things are run when an Openbox X Session is started.
+ RUN echo 'tint2 &' >>/etc/xdg/openbox/autostart
+
+# Download, decompress, move slicer to its final locations and setup the correct ownership
+ RUN wget https://download.slicer.org/bitstream/61a70469342a877cb3e5fe33 -O slicer.tar.gz \
  && tar xzf slicer.tar.gz -C /home/docker/ \
  && mv /home/docker/Sli* /home/docker/slicer \
  && rm slicer.tar.gz \
- && chown -R 1000:1000 /home/docker/slicer \
- && git clone --branch httpWebServer https://github.com/mauigna06/SlicerWeb \
+ && chown -R 1000:1000 /home/docker/slicer
+
+# clone httpWebServer branch from SlicerWeb repository
+# Move it to its final location and set up its ownership
+# httpWebServer allows POST request with code execution requirements
+ RUN git clone --branch httpWebServer https://github.com/mauigna06/SlicerWeb \
  && mv SlicerWeb /home/docker/slicer/ \
- && chown -R 1000:1000 /home/docker/slicer/SlicerWeb \
- && apt clean \
+ && chown -R 1000:1000 /home/docker/slicer/SlicerWeb
+
+# Clean cache and temps
+ RUN apt clean \
  && rm -rf /etc/ld.so.cache \
  && rm -rf /var/cache/ldconfig/* \
  && rm -rf /var/lib/apt/lists/* \
