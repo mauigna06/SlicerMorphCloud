@@ -152,7 +152,7 @@ RUN apt -y install \
     xvfb
 
 # install turbovnc and virtualgl
- RUN wget -O turbovnc.deb "https://sourceforge.net/projects/turbovnc/files/2.2.90%20(3.0%20beta1)/turbovnc_2.2.90_amd64.deb/download" \
+RUN wget -O turbovnc.deb "https://sourceforge.net/projects/turbovnc/files/2.2.90%20(3.0%20beta1)/turbovnc_2.2.90_amd64.deb/download" \
  && wget -O virtualgl.deb https://sourceforge.net/projects/virtualgl/files/3.0/virtualgl_3.0_amd64.deb/download \
  && wget -O virtualgl32.deb https://sourceforge.net/projects/virtualgl/files/3.0/virtualgl32_3.0_amd64.deb/download \
  && dpkg -i turbovnc*.deb virtualgl*.deb \
@@ -163,28 +163,28 @@ RUN apt -y install \
 #   between the second and third /
 # Configure window manager as openbox-session
 # Set up noVNC path
- RUN sed -i 's/^# \$wm =.*/\$wm = \"openbox-session\";/g' /etc/turbovncserver.conf \
+RUN sed -i 's/^# \$wm =.*/\$wm = \"openbox-session\";/g' /etc/turbovncserver.conf \
  && sed -i 's/^# \$noVNC =.*/\$noVNC = \"\/home\/docker\/noVNC\";/g' /etc/turbovncserver.conf
  
  # Clone noVNC repository
  # Move to its final location 
  # Setup ownership of all noVNC directory files (including it) to user='docker', group='docker'
- RUN git clone https://github.com/novnc/noVNC.git \
+RUN git clone https://github.com/novnc/noVNC.git \
  && mv noVNC /home/docker/ \
  && chown -R 1000:1000 /home/docker/noVNC
 
 # Set up novnc password
- RUN mkdir /home/docker/.vnc \
+RUN mkdir /home/docker/.vnc \
  && touch /home/docker/.vnc/passwd \
  && chmod 600 /home/docker/.vnc/passwd \
  && chown -R 1000:1000 /home/docker/.vnc
 
 # Create a file named "autostart" with "tint2 &" as text
 # These things are run when an Openbox X Session is started.
- RUN echo 'tint2 &' >>/etc/xdg/openbox/autostart
+RUN echo 'tint2 &' >>/etc/xdg/openbox/autostart
 
 # Download, decompress, move slicer to its final locations and setup the correct ownership
- RUN wget https://download.slicer.org/bitstream/61a70469342a877cb3e5fe33 -O slicer.tar.gz \
+RUN wget https://download.slicer.org/bitstream/61a70469342a877cb3e5fe33 -O slicer.tar.gz \
  && tar xzf slicer.tar.gz -C /home/docker/ \
  && mv /home/docker/Sli* /home/docker/slicer \
  && rm slicer.tar.gz \
@@ -193,20 +193,24 @@ RUN apt -y install \
 # clone httpWebServer branch from SlicerWeb repository
 # Move it to its final location and set up its ownership
 # httpWebServer allows POST request with code execution requirements
- RUN git clone --branch httpWebServer https://github.com/mauigna06/SlicerWeb \
+RUN git clone --branch httpWebServer https://github.com/mauigna06/SlicerWeb \
  && mv SlicerWeb /home/docker/slicer/ \
  && chown -R 1000:1000 /home/docker/slicer/SlicerWeb
 
 # Clean cache and temps
- RUN apt clean \
+RUN apt clean \
  && rm -rf /etc/ld.so.cache \
  && rm -rf /var/cache/ldconfig/* \
  && rm -rf /var/lib/apt/lists/* \
  && rm -rf /tmp/* \
  && rm -rf /var/tmp/*
 
-RUN LNUM=$(sed -n '/launcher_item_app/=' /etc/tint2/panel.tint2rc | head -1) && \
-  sed -i "${LNUM}ilauncher_item_app = /home/docker/slicer/slicer.desktop" /etc/tint2/panel.tint2rc
+
+# save line where "launcher_item_app" is found for the first time
+RUN LNUM=$(sed -n '/launcher_item_app/=' /etc/tint2/panel.tint2rc | head -1)
+# replace line LNUM with the given string on the given file
+RUN sed -i "${LNUM}ilauncher_item_app = /home/docker/slicer/slicer.desktop" /etc/tint2/panel.tint2rc
+
 COPY etc/tint2/tint2rc.slicermorph /home/docker/.config/tint2/tintrc
 COPY slicer/* /home/docker/slicer/
 
