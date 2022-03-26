@@ -9,30 +9,17 @@ ENV NVIDIA_DRIVER_CAPABILITIES ${NVIDIA_DRIVER_CAPABILITIES},graphics,compat32
 # Create a group called 'docker' with GID=1000
 # Create user with userid=1000 and GID=1000, without home directory named 'docker' 
 # with the default shell /bin/sh
+# Adds the group "docker" to the supplementary groups of user "docker"
 # https://dhananjay4058.medium.com/what-does-sudo-usermod-a-g-group-user-do-on-linux-b1ab7ffbba9c
-RUN groupadd -g 1000 docker \
- && useradd -u 1000 -g 1000 -m docker -s /bin/bash \
- && usermod -a -G docker docker
+ENV DOCKER_USER hiveUser
+ENV DOCKER_UID 1000
+ENV DOCKER_USER_GROUP hiveUser
+ENV DOCKER_GID 1000
+ENV HOME /home/${DOCKER_USER}
 
-# Copy the contents of source (etc/tint2) to destination (etc/tint2)
-COPY etc/tint2 /etc/tint2
-#Chmod 755 sets permissions so that, (U)ser/owner can read, 
-# can write and can execute. (G)roup can read, can't write and can execute. 
-# (O)thers can read, can't write and can execute.
-# Chmod 644 sets permissions so that, (U)ser / owner can read, 
-# can write and can't execute. (G)roup can read, can't write and can't execute. 
-# (O)thers can read, can't write and can't execute.
-RUN chmod 755 /etc/tint2 \
- && chmod 644 /etc/tint2/*
-
-COPY usr/local /usr/local
-RUN chmod 755 /usr/local \
- && chmod 755 /usr/local/shared \
- && chmod 755 /usr/local/shared/backgrounds \
- && chmod 644 /usr/local/shared/backgrounds/*
-COPY usr/share/applications /usr/share/applications
-RUN chmod 755 /usr/share/applications \
- && chmod 644 /usr/share/applications/*
+RUN groupadd -g ${DOCKER_GID} ${DOCKER_USER_GROUP} \
+ && useradd -u ${DOCKER_UID} -g ${DOCKER_GID} -m ${DOCKER_USER} -s /bin/bash \
+ && usermod -a -G ${DOCKER_USER_GROUP} ${DOCKER_USER}
 
 # “apt-get update” updates the package sources list to get the latest list of 
 # available packages in the repositories and “apt-get upgrade” updates all the 
@@ -151,51 +138,71 @@ RUN apt -y install \
     libgomp1 \
     xvfb
 
+
+################################################################################
+# Prevent apt-get from prompting for keyboard choice
+#  https://superuser.com/questions/1356914/how-to-install-xserver-xorg-in-unattended-mode
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update -q -y && \
+    apt-get install -q -y \
+    xserver-xorg-video-dummy
+
+# install ca-certs to prevent - fatal: unable to access 
+#   'https://github.com/novnc/websockify/': server certificate verification failed. 
+#    CAfile: none CRLfile: none
+#RUN apt-get install -q -y --install ca-certificates
+
 # install turbovnc and virtualgl
-RUN wget -O turbovnc.deb "https://sourceforge.net/projects/turbovnc/files/2.2.90%20(3.0%20beta1)/turbovnc_2.2.90_amd64.deb/download" \
- && wget -O virtualgl.deb https://sourceforge.net/projects/virtualgl/files/3.0/virtualgl_3.0_amd64.deb/download \
- && wget -O virtualgl32.deb https://sourceforge.net/projects/virtualgl/files/3.0/virtualgl32_3.0_amd64.deb/download \
+ARG TURBOVNC_DOWNLOAD_URL="https://sourceforge.net/projects/turbovnc/files/2.2.90%20(3.0%20beta1)/turbovnc_2.2.90_amd64.deb/download"
+ARG VIRTUALGL_DOWNLOAD_URL=https://sourceforge.net/projects/virtualgl/files/3.0/virtualgl_3.0_amd64.deb/download
+ARG VIRTUALGL32_DOWNLOAD_URL=https://sourceforge.net/projects/virtualgl/files/3.0/virtualgl32_3.0_amd64.deb/download
+RUN set -x && wget -O turbovnc.deb ${TURBOVNC_DOWNLOAD_URL} \
+ && wget -O virtualgl.deb ${VIRTUALGL_DOWNLOAD_URL} \
+ && wget -O virtualgl32.deb ${VIRTUALGL32_DOWNLOAD_URL} \
  && dpkg -i turbovnc*.deb virtualgl*.deb \
  && rm *.deb \
  && apt install -f
 
-# On all strings that match the regex between the first and second / replace it by the regex
-#   between the second and third /
-# Configure window manager as openbox-session
-# Set up noVNC path
-RUN sed -i 's/^# \$wm =.*/\$wm = \"openbox-session\";/g' /etc/turbovncserver.conf \
- && sed -i 's/^# \$noVNC =.*/\$noVNC = \"\/home\/docker\/noVNC\";/g' /etc/turbovncserver.conf
- 
- # Clone noVNC repository
- # Move to its final location 
- # Setup ownership of all noVNC directory files (including it) to user='docker', group='docker'
-RUN git clone https://github.com/novnc/noVNC.git \
- && mv noVNC /home/docker/ \
- && chown -R 1000:1000 /home/docker/noVNC
 
-# Set up novnc password
-RUN mkdir /home/docker/.vnc \
- && touch /home/docker/.vnc/passwd \
- && chmod 600 /home/docker/.vnc/passwd \
- && chown -R 1000:1000 /home/docker/.vnc
+# Set VNC password
+#RUN mkdir /home/user/.vnc && \
+#    chown user /home/user/.vnc && \
+#    /usr/bin/printf '%s\n%s\n%s\n' 'password' 'password' 'n' | su user -c /opt/TurboVNC/bin/vncpasswd
+#RUN  echo -n 'password\npassword\nn\n' | su user -c vncpasswd
 
-# Create a file named "autostart" with "tint2 &" as text
-# These things are run when an Openbox X Session is started.
-RUN echo 'tint2 &' >>/etc/xdg/openbox/autostart
-
+ARG SLICER_DOWNLOAD_URL=https://download.slicer.org/bitstream/61a70469342a877cb3e5fe33
 # Download, decompress, move slicer to its final locations and setup the correct ownership
-RUN wget https://download.slicer.org/bitstream/61a70469342a877cb3e5fe33 -O slicer.tar.gz \
- && tar xzf slicer.tar.gz -C /home/docker/ \
- && mv /home/docker/Sli* /home/docker/slicer \
+RUN wget ${SLICER_DOWNLOAD_URL} -O slicer.tar.gz \
+ && tar xzf slicer.tar.gz -C ${HOME} \
+ && mv ${HOME}/Sli* ${HOME}/slicer \
  && rm slicer.tar.gz \
- && chown -R 1000:1000 /home/docker/slicer
+ && chown -R ${DOCKER_UID}:${DOCKER_GID} ${HOME}/slicer
+
+################################################################################
+# these go after installs to avoid trivial invalidation
+ENV VNCPORT=49053
+
+# needed by Xorg
+ENV DISPLAY=:10
+
+COPY xorg.conf ${HOME}
+COPY start-xorg.sh ${HOME}
+
+################################################################################
+RUN mkdir /tmp/runtime-sliceruser
+ENV XDG_RUNTIME_DIR=/tmp/runtime-sliceruser
+
+################################################################################
 
 # clone httpWebServer branch from SlicerWeb repository
 # Move it to its final location and set up its ownership
 # httpWebServer allows POST request with code execution requirements
 RUN git clone --branch httpWebServer https://github.com/mauigna06/SlicerWeb \
- && mv SlicerWeb /home/docker/slicer/ \
- && chown -R 1000:1000 /home/docker/slicer/SlicerWeb
+ && mv SlicerWeb ${HOME}/slicer/ \
+ && chown -R 1000:1000 ${HOME}/slicer/SlicerWeb
+
+################################################################################
 
 # Clean cache and temps
 RUN apt clean \
@@ -205,21 +212,41 @@ RUN apt clean \
  && rm -rf /tmp/* \
  && rm -rf /var/tmp/*
 
+################################################################################
 
-# save line where "launcher_item_app" is found for the first time
-RUN LNUM=$(sed -n '/launcher_item_app/=' /etc/tint2/panel.tint2rc | head -1)
-# replace line LNUM with the given string on the given file
-RUN sed -i "${LNUM}ilauncher_item_app = /home/docker/slicer/slicer.desktop" /etc/tint2/panel.tint2rc
+COPY addExtensionsModules.py ${HOME}/slicer/
 
-COPY etc/tint2/tint2rc.slicermorph /home/docker/.config/tint2/tintrc
-COPY slicer/* /home/docker/slicer/
+COPY .slicerrc.py ${HOME}/slicer/
+RUN chown -R ${DOCKER_UID}:${DOCKER_GID} ${HOME}/slicer/.slicerrc.py
 
-COPY addExtensionsModules.py /home/docker/slicer/
+RUN xvfb-run --auto-servernum ${HOME}/slicer/Slicer --python-script "${HOME}/slicer/addExtensionsModules.py" --no-splash --no-main-window
 
-COPY .slicerrc.py /home/docker/slicer/
-RUN chown -R 1000:1000 /home/docker/slicer/.slicerrc.py
+WORKDIR ${HOME}
+RUN chown ${DOCKER_USER} ${HOME} ${HOME}/slicer
 
-RUN xvfb-run --auto-servernum /home/docker/slicer/Slicer --python-script "/home/docker/slicer/addExtensionsModules.py" --no-splash --no-main-window
+#see jupyter notebook docker image on how Slicer is started automatically
+# check for turboVNC docker images
 
-WORKDIR /home/docker
-USER docker
+################################################################################
+EXPOSE $VNCPORT
+COPY run.sh .
+RUN chmod +rwx run.sh
+RUN set -x && ls
+ENTRYPOINT ["./run.sh"]
+
+# sh -c spawns a non-login, non-interactive session of sh (dash in Ubuntu). 
+CMD ["sh", "-c", "/opt/TurboVNC/bin/vncserver ${DISPLAY} -rfbport ${VNCPORT}"]
+
+USER ${DOCKER_USER}
+
+################################################################################
+# Build-time metadata as defined at http://label-schema.org
+ARG BUILD_DATE
+ARG IMAGE
+ARG VCS_REF
+ARG VCS_URL
+LABEL org.label-schema.build-date=$BUILD_DATE \
+      org.label-schema.name=$IMAGE \
+      org.label-schema.vcs-ref=$VCS_REF \
+      org.label-schema.vcs-url=$VCS_URL \
+      org.label-schema.schema-version="1.0"
