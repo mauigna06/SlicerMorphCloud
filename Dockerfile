@@ -221,5 +221,14 @@ RUN chown -R 1000:1000 /home/docker/slicer/.slicerrc.py
 
 RUN xvfb-run --auto-servernum /home/docker/slicer/Slicer --python-script "/home/docker/slicer/addExtensionsModules.py" --no-splash --no-main-window
 
+RUN rm -rf /home/docker/.vnc && \
+    mkdir /home/docker/.vnc && \
+    echo 12345678 | /opt/TurboVNC/bin/vncpasswd -f > /home/docker/.vnc/passwd && \
+    chmod ugo=rw /home/docker/.vnc/passwd
+
+COPY run.sh /home/docker
+RUN chmod +rwx /home/docker/run.sh
+ENTRYPOINT ["/home/docker/run.sh"]
+
 WORKDIR /home/docker
 USER docker

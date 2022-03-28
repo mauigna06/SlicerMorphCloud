@@ -28,8 +28,7 @@ CONTAINER_ID=$(docker run -it \
         --rm \
         -m 100g \
         --cpus=4 \
-        cloud \
-        /opt/TurboVNC/bin/vncserver -fg -autokill -otp )
+        cloud)
 # CONTAINER_NAME=$(docker ps --filter "id=$CONTAINER_ID" --format "{{.Names}}")
 errcho
 errcho Execute:
@@ -43,14 +42,6 @@ VNC_DISPLAY=`hostname`::$PORT
 errcho "VNC DISPLAY is ${VNC_DISPLAY}"
 NOVNC_URL="http://`hostname`:${NOVNC_PORT}/vnc.html?host=`hostname`&port=$PORT&resize=remote"
 errcho "NOVNC URL is ${NOVNC_URL}"
-OTP=
-while [ "$OTP" = "" ]; do
-        sleep 1
-        OTP=$(docker logs $CONTAINER_NAME | grep "Full control one-time password" | sed 's/.*: //g')
-done
-errcho SESSION PASSWORD is $OTP
-docker exec $CONTAINER_NAME sh -c "echo $OTP| /opt/TurboVNC/bin/vncpasswd -f >/home/docker/.vnc/passwd 2>/dev/null"
-
 
 #errcho USERNAME, PORT, NOVNC_PORT, REST_API_PORT, VNC_DISPLAY, NOVNC_URL, OTP
 #errcho $USERNAME, $PORT, $NOVNC_PORT, $REST_API_PORT, $VNC_DISPLAY, $NOVNC_URL, $OTP
