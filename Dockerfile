@@ -221,5 +221,14 @@ RUN chown -R 1000:1000 /home/docker/slicer/.slicerrc.py
 
 RUN xvfb-run --auto-servernum /home/docker/slicer/Slicer --python-script "/home/docker/slicer/addExtensionsModules.py" --no-splash --no-main-window
 
+RUN touch /home/docker/.Xauthority
+RUN chown -R 1000:1000 /home/docker/.Xauthority
+
+RUN mkdir /var/log/docker
+RUN touch /var/log/docker/TurboVNC.log
+RUN chown -R 1000:1000 /var/log/docker/TurboVNC.log
+
 WORKDIR /home/docker
-USER docker
+#USER docker
+
+CMD ["sh"]

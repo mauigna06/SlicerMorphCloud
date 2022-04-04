@@ -1,0 +1,25 @@
+-v [/host/volume/location]:[/container/storage]
+
+
+docker exec ${CONTAINER_NAME} xvfb-run --auth-file=/root/.Xauthority /home/docker/slicer/Slicer --server-args=":1 -screen 0 1024x768x24" &
+
+
+docker exec -d ${CONTAINER_NAME} /opt/TurboVNC/bin/vncserver -fg -autokill -otp 
+
+RUN touch /home/docker/.Xauthority
+RUN chown -R 1000:1000 /home/docker/.Xauthority
+
+
+
+
+./Xvnc :1 -desktop TurboVNC: mauro-Lenovo-IdeaPad-S145-15IIL:1 (mauro) -auth /run/user/1000/gdm/Xauthority -geometry 1240x900 -depth 24 -rfbwait 120000 -rfbauth /home/mauro/.vnc/passwd -x509cert /home/mauro/.vnc/x509_cert.pem -x509key /home/mauro/.vnc/x509_private.pem -rfbport 5901 -fp /usr/share/fonts/X11/misc,/usr/share/fonts/X11/Type1 -deferupdate 1 -dridir /usr/lib/x86_64-linux-gnu/dri -registrydir /usr/lib/xorg
+
+
+ps -ef | grep TurboVNC | sed -n 1p
+
+
+docker exec -d ${CONTAINER_NAME} /opt/TurboVNC/bin/vncserver -fg -autokill -otp --logfile /var/log/my-application.log
+
+
+# Redirect TurboVNC log output to docker log collector
+#RUN ln -sf /proc/1/fd/1 /var/log/docker/TurboVNC.log

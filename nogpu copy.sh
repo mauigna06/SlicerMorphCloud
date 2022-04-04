@@ -17,9 +17,6 @@ if [ "$1" == "" ]; then
 fi
 USERNAME=$1
 
-script_dir=$(cd $(dirname $0) || exit 1; pwd)
-errcho $script_dir
-
 CONTAINER_NAME=${USERNAME}
 CONTAINER_ID=$(docker run -it \
         --name ${CONTAINER_NAME} \
@@ -32,13 +29,17 @@ CONTAINER_ID=$(docker run -it \
         -m 100g \
         --cpus=4 \
         cloud)
-
-#        -v [$script_dir]:[/var/log/docker] \
-docker exec -d ${CONTAINER_NAME} sh -c "tail -n 0 -q -F /var/log/docker/*.log >> /proc/1/fd/1 &"
-docker exec -d ${CONTAINER_NAME} sh -c "/opt/TurboVNC/bin/vncserver -fg -autokill -otp >> /var/log/docker/TurboVNC.log"
-docker exec -ti ${CONTAINER_NAME} sh
-
+#errcho execute xbfv
+#docker exec ${CONTAINER_NAME} Xvfb :1 -screen 0 1024x768x24 &
+#errcho remove x1-lock
+#docker exec ${CONTAINER_NAME} rm -f /tmp/.X1-lock /tmp/.X11-unix/X1
+errcho execute vncserver
+docker exec ${CONTAINER_NAME} sh -c "/opt/TurboVNC/bin/vncserver :1 -securitytypes otp -otp > /home/docker/vncServerLog.txt &"
 # CONTAINER_NAME=$(docker ps --filter "id=$CONTAINER_ID" --format "{{.Names}}")
+# xauth with complain unless ~/.Xauthority exists
+docker exec ${CONTAINER_NAME} touch ~/.Xauthority
+# only this one key is needed for X11 over SSH 
+docker exec ${CONTAINER_NAME} xauth generate :1 . trusted 
 errcho
 errcho Execute:
 errcho docker stop $CONTAINER_NAME
@@ -51,18 +52,14 @@ VNC_DISPLAY=`hostname`::$PORT
 errcho "VNC DISPLAY is ${VNC_DISPLAY}"
 NOVNC_URL="http://`hostname`:${NOVNC_PORT}/vnc.html?host=`hostname`&port=$PORT&resize=remote"
 errcho "NOVNC URL is ${NOVNC_URL}"
-
-#Remember that only process with PID==1 writes on the docker log so other processes don't
-# write to it
 OTP=
 while [ "$OTP" = "" ]; do
         sleep 1
-        OTP=$(docker logs $CONTAINER_NAME | grep "Full control one-time password" | sed 's/.*: //g')
+        OTP=$(docker exec $CONTAINER_NAME cat /home/docker/vncServerLog.txt | grep "Full control one-time password" | sed 's/.*: //g')
 done
 errcho SESSION PASSWORD is $OTP
 docker exec $CONTAINER_NAME sh -c "echo $OTP| /opt/TurboVNC/bin/vncpasswd -f >/home/docker/.vnc/passwd 2>/dev/null"
 
-docker exec -d ${CONTAINER_NAME} /home/docker/slicer/Slicer
 
 #errcho USERNAME, PORT, NOVNC_PORT, REST_API_PORT, VNC_DISPLAY, NOVNC_URL, OTP
 #errcho $USERNAME, $PORT, $NOVNC_PORT, $REST_API_PORT, $VNC_DISPLAY, $NOVNC_URL, $OTP
@@ -75,4 +72,6 @@ POST_URL=`hostname`:${REST_API_PORT}/slicer/repl
 errcho
 errcho Execute Slicer code like this:
 errcho curl -X POST "${POST_URL}" --data \"slicer.app.layoutManager\(\).setLayout\(slicer.vtkMRMLLayoutNode.SlicerLayoutOneUpRedSliceView\)\"
-
+errcho
+errcho execute slicer
+docker exec ${CONTAINER_NAME} DISPLAY=:1 /home/docker/slicer/Slicer
