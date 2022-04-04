@@ -10,7 +10,8 @@ RUN touch /home/docker/.Xauthority
 RUN chown -R 1000:1000 /home/docker/.Xauthority
 
 
-
+DISPLAY=:0.0 xclock
+DISPLAY=:1 /home/docker/slicer/Slicer
 
 ./Xvnc :1 -desktop TurboVNC: mauro-Lenovo-IdeaPad-S145-15IIL:1 (mauro) -auth /run/user/1000/gdm/Xauthority -geometry 1240x900 -depth 24 -rfbwait 120000 -rfbauth /home/mauro/.vnc/passwd -x509cert /home/mauro/.vnc/x509_cert.pem -x509key /home/mauro/.vnc/x509_private.pem -rfbport 5901 -fp /usr/share/fonts/X11/misc,/usr/share/fonts/X11/Type1 -deferupdate 1 -dridir /usr/lib/x86_64-linux-gnu/dri -registrydir /usr/lib/xorg
 

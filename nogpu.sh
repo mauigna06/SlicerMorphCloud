@@ -28,15 +28,11 @@ CONTAINER_ID=$(docker run -it \
         --expose 5901 \
         --expose 2016 \
         -P \
+        -v $script_dir/dockerLogs/:/var/log/docker/ \
         --rm \
         -m 100g \
         --cpus=4 \
         cloud)
-
-#        -v [$script_dir]:[/var/log/docker] \
-docker exec -d ${CONTAINER_NAME} sh -c "tail -n 0 -q -F /var/log/docker/*.log >> /proc/1/fd/1 &"
-docker exec -d ${CONTAINER_NAME} sh -c "/opt/TurboVNC/bin/vncserver -fg -autokill -otp >> /var/log/docker/TurboVNC.log"
-docker exec -ti ${CONTAINER_NAME} sh
 
 # CONTAINER_NAME=$(docker ps --filter "id=$CONTAINER_ID" --format "{{.Names}}")
 errcho
@@ -57,7 +53,7 @@ errcho "NOVNC URL is ${NOVNC_URL}"
 OTP=
 while [ "$OTP" = "" ]; do
         sleep 1
-        OTP=$(docker logs $CONTAINER_NAME | grep "Full control one-time password" | sed 's/.*: //g')
+        OTP=$(cat $script_dir/dockerLogs/TurboVNCerror.log | grep "Full control one-time password" | sed 's/.*: //g')
 done
 errcho SESSION PASSWORD is $OTP
 docker exec $CONTAINER_NAME sh -c "echo $OTP| /opt/TurboVNC/bin/vncpasswd -f >/home/docker/.vnc/passwd 2>/dev/null"

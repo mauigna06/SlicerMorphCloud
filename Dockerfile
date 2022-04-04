@@ -228,7 +228,9 @@ RUN mkdir /var/log/docker
 RUN touch /var/log/docker/TurboVNC.log
 RUN chown -R 1000:1000 /var/log/docker/TurboVNC.log
 
-WORKDIR /home/docker
-#USER docker
+COPY run.sh /home/docker
+RUN chmod +rwx /home/docker/run.sh
+ENTRYPOINT ["/home/docker/run.sh"]
 
-CMD ["sh"]
+WORKDIR /home/docker
+USER docker
